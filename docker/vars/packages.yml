@@ -1,0 +1,7 @@
+packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - python3-setuptools
+  - python3-pip
+  - python3-virtualenv

@@ -1,0 +1,104 @@
+---
+# tasks file for docker
+  - name: Include packages vars
+    include_vars:
+      file: packages.yml
+
+  - name: Set docker repo key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: Set docker repo
+    apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release|lower }} stable"
+      state: present
+      update_cache: yes
+
+  - name: Install default packages
+    apt:
+      name: "{{ packages }}"
+      update_cache: yes
+      state: present
+
+  - name: Check current docker-compose version.
+    command: docker-compose --version
+    register: docker_compose_current_version
+    changed_when: false
+    failed_when: false
+
+  - name: Delete existing docker-compose version if it's different.
+    file:
+      path: "{{ docker_compose_path }}"
+      state: absent
+    when: >
+      docker_compose_current_version.stdout is defined
+      and docker_compose_version not in docker_compose_current_version.stdout
+
+  - name: Install Docker Compose (if configured).
+    get_url:
+      url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
+      dest: "{{ docker_compose_path }}"
+      mode: 0755
+
+  - name: Upgrade pip
+    shell:
+      pip3 install --upgrade pip
+
+  - name: Install pip packages
+    pip: 
+      name: docker
+      
+  - name: Create Portainer volume
+    docker_volume:
+      name: portainer_data
+      state: present
+
+#  - name: Create NetData volumes
+#    docker_volume:
+#      name: netdataconfig
+#      state: present
+#
+#  - name: Create NetData volumes
+#    docker_volume:
+#      name: netdatalib
+#      state: present
+#
+#  - name: Create NetData volumes
+#    docker_volume:
+#      name: netdatacache
+#      state: present
+
+  - name: Deploy portainer container
+    docker_container:
+      name: portainer
+      image: portainer/portainer-ce
+      state: started
+      command: --admin-password='$2y$05$Tz4rzeO8ukWfvGEI3DRdO.U1PvpBGQmPPJxXV9LxZNfGxfjid.xce'
+      ports:
+        - "9000:9000"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - portainer_data:/data
+
+#  - name: Deploy netdata container
+#    docker_container:
+#      name: netdata
+#      image: netdata/netdata
+#      state: started
+#      ports: 
+#        - "19999:19999"
+#      volumes:
+#        - netdataconfig:/etc/netdata
+#        - netdatalib:/var/lib/netdata
+#        - netdatacache:/var/cache/netdata
+#        - /etc/passwd:/host/etc/passwd:ro
+#        - /etc/group:/host/etc/group:ro
+#        - /proc:/host/proc:ro
+#        - /sys:/host/sys:ro
+#        - /etc/os-release:/host/etc/os-release:ro
+#      capabilities:
+#        - SYS_PTRACE
+#      security_opts:
+#        - apparmor=unconfined
+

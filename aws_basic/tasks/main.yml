@@ -1,0 +1,21 @@
+---
+# tasks file for aws_basic
+  - name: Install AWS CLI v2 dependencies
+    apt:
+      update_cache: yes
+      state: present
+      name: ['unzip', 'groff', 'less']
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: Download and unzip AWS CLI v2
+    ansible.builtin.unarchive:
+      src: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+      dest: /tmp/
+      remote_src: yes
+
+  - name: Installs AWS CLI v2
+    ansible.builtin.command:
+      cmd: /tmp/aws/install
+      creates: /usr/local/bin/aws
+    become: true
+
